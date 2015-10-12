@@ -203,42 +203,28 @@ def expensive_tastes
 
   execute(<<-SQL)
     SELECT
-
+      styles.style,
+      (SUM(albums_with_trackcount.price) / SUM(albums_with_trackcount.count))
     FROM
       styles
     JOIN
-      albums
-    ON
-      albums.asin = styles.album
-    JOIN
-      tracks
-    ON
-      albums.asin = tracks.album
-    WHERE
-
+      (SELECT
+        albums.*,
+        COUNT(tracks.album) AS count
+      FROM
+        albums
+      JOIN
+        tracks ON tracks.album = albums.asin
+      WHERE
+        albums.price IS NOT NULL
+      GROUP BY
+        albums.asin
+      ) AS albums_with_trackcount ON albums_with_trackcount.asin = styles.album
     GROUP BY
-      styles.style
-    HAVING
-      (albums.price / COUNT(tracks)) < .50
+       styles.style
+    ORDER BY
+      (SUM(albums_with_trackcount.price) / SUM(albums_with_trackcount.count)) DESC
+    LIMIT 5
 
-
-      (
-        SELECT
-          styles.style, COUNT(albums.asin)
-        FROM
-          albums
-        JOIN
-          tracks
-        ON
-          tracks.album = albums.asin
-        JOIN
-          styles
-        ON
-          styles.album = albums.asin
-        GROUP BY
-          styles.style
-      )
   SQL
 end
-Then add up the prices of all of those albums
-JOIN this with albumsJOINstyles
